@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { DollarSign, TrendingUp, Receipt, PiggyBank, Calendar, Save } from 'lucide-react';
+import { DollarSign, TrendingUp, Receipt, PiggyBank, Calendar, Save, Trash2, Plus } from 'lucide-react';
 
 function App() {
   // Get month and year from LocalStorage
@@ -169,6 +169,44 @@ function App() {
     }));
   };
 
+  const deleteItem = (category, itemId) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      setBudgetData(prev => ({
+        ...prev,
+        [category]: {
+          ...prev[category],
+          items: prev[category].items.filter(item => item.id !== itemId)
+        }
+      }));
+    }
+  };
+
+  const addNewItem = (category) => {
+    setBudgetData(prev => {
+      const existingItems = prev[category].items;
+      const newId = existingItems.length > 0 
+        ? Math.max(...existingItems.map(item => item.id)) + 1 
+        : 1;
+      
+      return {
+        ...prev,
+        [category]: {
+          ...prev[category],
+          items: [
+            ...existingItems,
+            {
+              id: newId,
+              name: 'New Item',
+              planned: 0,
+              actual: 0,
+              checked: true
+            }
+          ]
+        }
+      };
+    });
+  };
+
   // Summary Card Component
   const SummaryCard = ({ title, amount, bgColor, icon: Icon }) => (
     <div className={`${bgColor} rounded-lg p-6 shadow-sm border border-gray-200`}>
@@ -187,8 +225,15 @@ function App() {
     
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className={`${bgColor} px-4 py-3 border-b border-gray-300`}>
+        <div className={`${bgColor} px-4 py-3 border-b border-gray-300 flex justify-between items-center`}>
           <h3 className="text-xs font-bold tracking-[0.2em] uppercase text-gray-700">{title}</h3>
+          <button
+            onClick={() => addNewItem(category)}
+            className="flex items-center gap-1 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors duration-200"
+          >
+            <Plus className="w-3 h-3" />
+            Add Item
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -199,6 +244,7 @@ function App() {
                 <th className="px-3 py-2 text-right">PLANNED</th>
                 <th className="px-3 py-2 text-right">ACTUAL</th>
                 <th className="px-3 py-2 text-right">PROGRESS</th>
+                <th className="px-3 py-2 text-center w-16">ACTION</th>
               </tr>
             </thead>
             <tbody>
@@ -249,6 +295,15 @@ function App() {
                         </span>
                       </div>
                     </td>
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        onClick={() => deleteItem(category, item.id)}
+                        className="p-1 hover:bg-red-100 rounded transition-colors duration-200 group"
+                        title="Delete item"
+                      >
+                        <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -264,6 +319,7 @@ function App() {
                 <td className="px-3 py-3 text-right text-sm text-gray-800">
                   {totalPlanned > 0 ? ((totalActual / totalPlanned) * 100).toFixed(1) : 0}%
                 </td>
+                <td className="px-3 py-3"></td>
               </tr>
             </tbody>
           </table>
