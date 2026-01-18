@@ -1,6 +1,126 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { DollarSign, TrendingUp, Receipt, PiggyBank, Calendar, Save, Trash2, Plus } from 'lucide-react';
+
+// Summary Card Component
+const SummaryCard = React.memo(({ title, amount, bgColor, icon: Icon }) => (
+  <div className={`${bgColor} rounded-lg p-6 shadow-sm border border-gray-200`}>
+    <div className="flex items-center justify-between mb-2">
+      <h3 className="text-xs font-bold tracking-[0.2em] uppercase text-gray-700">{title}</h3>
+      <Icon className="w-5 h-5 text-gray-600" />
+    </div>
+    <p className="text-2xl font-bold text-gray-800">${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+  </div>
+));
+
+// Budget Table Component
+const BudgetTable = React.memo(({ title, items, category, bgColor, headerBg, onUpdateName, onUpdatePlanned, onUpdateActual, onToggleChecked, onDeleteItem, onAddNewItem }) => {
+  const totalPlanned = items.reduce((sum, item) => sum + item.planned, 0);
+  const totalActual = items.reduce((sum, item) => sum + (item.checked ? item.actual : 0), 0);
+  
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className={`${bgColor} px-4 py-3 border-b border-gray-300 flex justify-between items-center`}>
+        <h3 className="text-xs font-bold tracking-[0.2em] uppercase text-gray-700">{title}</h3>
+        <button
+          onClick={() => onAddNewItem(category)}
+          className="flex items-center gap-1 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors duration-200"
+        >
+          <Plus className="w-3 h-3" />
+          Add Item
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className={`${headerBg} text-xs font-semibold text-gray-700 border-b border-gray-300`}>
+              <th className="px-3 py-2 text-center w-12"></th>
+              <th className="px-3 py-2 text-left">ITEM</th>
+              <th className="px-3 py-2 text-right">PLANNED</th>
+              <th className="px-3 py-2 text-right">ACTUAL</th>
+              <th className="px-3 py-2 text-right">PROGRESS</th>
+              <th className="px-3 py-2 text-center w-16">ACTION</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => {
+              const progress = item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0;
+              
+              return (
+                <tr key={item.id} className={`border-b border-gray-200 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                  <td className="px-3 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={item.checked}
+                      onChange={() => onToggleChecked(category, item.id)}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="text"
+                      value={item.name}
+                      onChange={(e) => onUpdateName(category, item.id, e.target.value)}
+                      className="w-full text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <input
+                      type="number"
+                      value={item.planned}
+                      onChange={(e) => onUpdatePlanned(category, item.id, e.target.value)}
+                      className="w-full text-right text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      step="0.01"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <input
+                      type="number"
+                      value={item.actual}
+                      onChange={(e) => onUpdateActual(category, item.id, e.target.value)}
+                      className="w-full text-right text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      step="0.01"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-right text-sm">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className={`font-medium ${progress >= 100 ? 'text-green-600' : 'text-gray-700'}`}>
+                        {progress.toFixed(1)}%
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    <button
+                      onClick={() => onDeleteItem(category, item.id)}
+                      className="p-1 hover:bg-red-100 rounded transition-colors duration-200 group"
+                      title="Delete item"
+                    >
+                      <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+            <tr className="bg-gray-100 font-semibold border-t-2 border-gray-400">
+              <td className="px-3 py-3"></td>
+              <td className="px-3 py-3 text-sm text-gray-800">TOTAL</td>
+              <td className="px-3 py-3 text-right text-sm text-gray-800">
+                ${totalPlanned.toFixed(2)}
+              </td>
+              <td className="px-3 py-3 text-right text-sm text-gray-800">
+                ${totalActual.toFixed(2)}
+              </td>
+              <td className="px-3 py-3 text-right text-sm text-gray-800">
+                {totalPlanned > 0 ? ((totalActual / totalPlanned) * 100).toFixed(1) : 0}%
+              </td>
+              <td className="px-3 py-3"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+});
 
 function App() {
   // Get month and year from LocalStorage
@@ -121,7 +241,8 @@ function App() {
     };
   }, [budgetData]);
 
-  const updateActual = (category, itemId, value) => {
+  // Update functions wrapped in useCallback to prevent unnecessary re-renders
+  const updateActual = useCallback((category, itemId, value) => {
     setBudgetData(prev => ({
       ...prev,
       [category]: {
@@ -131,9 +252,9 @@ function App() {
         )
       }
     }));
-  };
+  }, []);
 
-  const updatePlanned = (category, itemId, value) => {
+  const updatePlanned = useCallback((category, itemId, value) => {
     setBudgetData(prev => ({
       ...prev,
       [category]: {
@@ -143,9 +264,9 @@ function App() {
         )
       }
     }));
-  };
+  }, []);
 
-  const updateName = (category, itemId, value) => {
+  const updateName = useCallback((category, itemId, value) => {
     setBudgetData(prev => ({
       ...prev,
       [category]: {
@@ -155,9 +276,9 @@ function App() {
         )
       }
     }));
-  };
+  }, []);
 
-  const toggleChecked = (category, itemId) => {
+  const toggleChecked = useCallback((category, itemId) => {
     setBudgetData(prev => ({
       ...prev,
       [category]: {
@@ -167,9 +288,9 @@ function App() {
         )
       }
     }));
-  };
+  }, []);
 
-  const deleteItem = (category, itemId) => {
+  const deleteItem = useCallback((category, itemId) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       setBudgetData(prev => ({
         ...prev,
@@ -179,9 +300,9 @@ function App() {
         }
       }));
     }
-  };
+  }, []);
 
-  const addNewItem = (category) => {
+  const addNewItem = useCallback((category) => {
     setBudgetData(prev => {
       const existingItems = prev[category].items;
       const newId = existingItems.length > 0 
@@ -205,128 +326,7 @@ function App() {
         }
       };
     });
-  };
-
-  // Summary Card Component
-  const SummaryCard = ({ title, amount, bgColor, icon: Icon }) => (
-    <div className={`${bgColor} rounded-lg p-6 shadow-sm border border-gray-200`}>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold tracking-[0.2em] uppercase text-gray-700">{title}</h3>
-        <Icon className="w-5 h-5 text-gray-600" />
-      </div>
-      <p className="text-2xl font-bold text-gray-800">${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-    </div>
-  );
-
-  // Budget Table Component
-  const BudgetTable = ({ title, items, category, bgColor, headerBg }) => {
-    const totalPlanned = items.reduce((sum, item) => sum + item.planned, 0);
-    const totalActual = items.reduce((sum, item) => sum + (item.checked ? item.actual : 0), 0);
-    
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className={`${bgColor} px-4 py-3 border-b border-gray-300 flex justify-between items-center`}>
-          <h3 className="text-xs font-bold tracking-[0.2em] uppercase text-gray-700">{title}</h3>
-          <button
-            onClick={() => addNewItem(category)}
-            className="flex items-center gap-1 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors duration-200"
-          >
-            <Plus className="w-3 h-3" />
-            Add Item
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className={`${headerBg} text-xs font-semibold text-gray-700 border-b border-gray-300`}>
-                <th className="px-3 py-2 text-center w-12"></th>
-                <th className="px-3 py-2 text-left">ITEM</th>
-                <th className="px-3 py-2 text-right">PLANNED</th>
-                <th className="px-3 py-2 text-right">ACTUAL</th>
-                <th className="px-3 py-2 text-right">PROGRESS</th>
-                <th className="px-3 py-2 text-center w-16">ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => {
-                const progress = item.planned > 0 ? Math.min((item.actual / item.planned) * 100, 100) : 0;
-                const difference = item.planned - item.actual;
-                
-                return (
-                  <tr key={item.id} className={`border-b border-gray-200 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                    <td className="px-3 py-2 text-center">
-                      <input
-                        type="checkbox"
-                        checked={item.checked}
-                        onChange={() => toggleChecked(category, item.id)}
-                        className="w-4 h-4 cursor-pointer"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="text"
-                        value={item.name}
-                        onChange={(e) => updateName(category, item.id, e.target.value)}
-                        className="w-full text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <input
-                        type="number"
-                        value={item.planned}
-                        onChange={(e) => updatePlanned(category, item.id, e.target.value)}
-                        className="w-full text-right text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        step="0.01"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <input
-                        type="number"
-                        value={item.actual}
-                        onChange={(e) => updateActual(category, item.id, e.target.value)}
-                        className="w-full text-right text-sm px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
-                        step="0.01"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right text-sm">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className={`font-medium ${progress >= 100 ? 'text-green-600' : 'text-gray-700'}`}>
-                          {progress.toFixed(1)}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        onClick={() => deleteItem(category, item.id)}
-                        className="p-1 hover:bg-red-100 rounded transition-colors duration-200 group"
-                        title="Delete item"
-                      >
-                        <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-600" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              <tr className="bg-gray-100 font-semibold border-t-2 border-gray-400">
-                <td className="px-3 py-3"></td>
-                <td className="px-3 py-3 text-sm text-gray-800">TOTAL</td>
-                <td className="px-3 py-3 text-right text-sm text-gray-800">
-                  ${totalPlanned.toFixed(2)}
-                </td>
-                <td className="px-3 py-3 text-right text-sm text-gray-800">
-                  ${totalActual.toFixed(2)}
-                </td>
-                <td className="px-3 py-3 text-right text-sm text-gray-800">
-                  {totalPlanned > 0 ? ((totalActual / totalPlanned) * 100).toFixed(1) : 0}%
-                </td>
-                <td className="px-3 py-3"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
+  }, []);
 
   // Donut Chart Component
   const AmountLeftChart = () => {
@@ -464,6 +464,12 @@ function App() {
             category="income"
             bgColor="bg-[#dae3f3]"
             headerBg="bg-[#c5d9f1]"
+            onUpdateName={updateName}
+            onUpdatePlanned={updatePlanned}
+            onUpdateActual={updateActual}
+            onToggleChecked={toggleChecked}
+            onDeleteItem={deleteItem}
+            onAddNewItem={addNewItem}
           />
         </div>
 
@@ -476,6 +482,12 @@ function App() {
             category="expenses"
             bgColor="bg-[#dae3f3]"
             headerBg="bg-[#c5d9f1]"
+            onUpdateName={updateName}
+            onUpdatePlanned={updatePlanned}
+            onUpdateActual={updateActual}
+            onToggleChecked={toggleChecked}
+            onDeleteItem={deleteItem}
+            onAddNewItem={addNewItem}
           />
 
           {/* Bills Table */}
@@ -485,6 +497,12 @@ function App() {
             category="bills"
             bgColor="bg-[#fff2cc]"
             headerBg="bg-[#ffe699]"
+            onUpdateName={updateName}
+            onUpdatePlanned={updatePlanned}
+            onUpdateActual={updateActual}
+            onToggleChecked={toggleChecked}
+            onDeleteItem={deleteItem}
+            onAddNewItem={addNewItem}
           />
         </div>
 
@@ -496,6 +514,12 @@ function App() {
             category="savings"
             bgColor="bg-[#dae3f3]"
             headerBg="bg-[#c5d9f1]"
+            onUpdateName={updateName}
+            onUpdatePlanned={updatePlanned}
+            onUpdateActual={updateActual}
+            onToggleChecked={toggleChecked}
+            onDeleteItem={deleteItem}
+            onAddNewItem={addNewItem}
           />
         </div>
       </div>
